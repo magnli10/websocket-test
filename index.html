@@ -42,7 +42,9 @@
     }
 
     function init() {
-      ws = new WebSocket('ws://localhost:1234');
+      let href = location.href;
+      href = href.replace('http','ws');
+      ws = new WebSocket(href);
 
       ws.onopen = function () {
         createElement("Connected", "darkorange");
