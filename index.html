@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Websocket test</title>
+  </head>
+  <body>
+    <div style="display: flex; justify-content: flex-start;">
+      <div style="color:red; margin-right: 10px;">
+        Error event
+      </div>
+      <div style="color:darkorange; margin-right: 10px;">
+        Status event
+      </div>
+      <div style="color:blue; margin-right: 10px;">
+        Incoming
+      </div>
+      <div style="color:green; margin-right: 10px;">
+        Outgoing
+      </div>
+    </div>
+    <div class="">
+        <button onclick="init();">Reset</button>
+        <input type="text" id="intervalInput" onkeyup="update();" name="interval" value="5">
+    </div>
+
+    <div id="output"></div>
+    <script>
+    let ws;
+    let inter;
+
+    function close() {
+      if (ws)
+        ws.close();
+
+      clearInterval(inter);
+    }
+
+    function update() {
+      clearInterval(inter);
+      setup();
+    }
+
+    function init() {
+      ws = new WebSocket('ws://localhost:1234');
+
+      ws.onopen = function () {
+        createElement("Connected", "darkorange");
+        setup();
+      }
+
+      ws.onclose = function () {
+        createElement("Closed", "darkorange");
+        setup();
+      }
+
+      ws.onmessage = function () {
+        const data = JSON.parse(event.data);
+        createElement(data.msg, "blue", data.ackTs);
+        createElement(Math.abs(data.ackTs - Date.now())+"ms", "darkorange", data.ackTs);
+      }
+
+      ws.onerror = function () {
+        createElement(event.message, "red");
+        init();
+      }
+    }
+
+    function setup () {
+      clearInterval(inter);
+      inter = setInterval(function() {
+        const ts = Date.now();
+
+        createRow(ts);
+        createElement('ping', 'green', ts);
+
+        if(ws.readyState === 1) {
+          ws.send(JSON.stringify({
+            msg: 'ping',
+            clientTs: ts
+          }));
+        }
+
+      }, (parseInt(document.getElementById("intervalInput").value, 10) || 5) * 1000);
+    }
+
+    function createRow(id) {
+      const el = document.createElement('div');
+      el.classList.add(id);
+      el.style.display = "flex";
+      const insert = document.getElementById('output');
+
+      insert.insertBefore(el, insert.firstChild);
+      //TODO MAXLENGTH
+    }
+
+    function createElement(msg, hexColor, rowId) {
+      const els = document.getElementsByClassName(rowId);
+      const p = document.createElement('p');
+      p.innerHTML = msg;
+      p.style.color = hexColor;
+      p.style.margin = "5px";
+
+      if (rowId) {
+        els[0].insertBefore(p, els[0].lastChild && els[0].lastChild.nextSibling);
+      } else {
+        const insert = document.getElementById('output');
+        insert.insertBefore(p, insert.firstChild);
+      }
+    }
+
+    init();
+
+    </script>
+  </body>
+</html>
